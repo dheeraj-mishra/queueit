@@ -1,4 +1,4 @@
-# Todo App
+# QUEUE IT
 
 This is a small **todo app** I made as a side project.  
 The idea was to keep it **simple, minimal, and modern-looking** without adding a ton of extra stuff.
