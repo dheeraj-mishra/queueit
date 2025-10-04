@@ -1,0 +1,24 @@
+<script>
+  import TaskForm from "./components/TaskForm.svelte";
+  import TaskCard from "./components/TaskCard.svelte";
+  import ThemeToggle from "./components/ThemeToggle.svelte";
+  import { tasks } from "./lib/store.js";
+</script>
+
+<main class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors p-6">
+  <header class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Todo App</h1>
+    <ThemeToggle />
+  </header>
+
+  <TaskForm />
+
+  <section class="grid gap-4">
+    {#each $tasks as task (task.id)}
+      <TaskCard {task} />
+    {:else}
+      <p class="text-gray-500 dark:text-gray-400">No tasks yet. Add one above!</p>
+    {/each}
+  </section>
+</main>
+

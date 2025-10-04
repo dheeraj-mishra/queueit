@@ -1,0 +1,29 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*_test
+
+# Output of 'go build'
+*.out
+
+# Dependency directories
+vendor/
+Godeps/
+glide.lock
+Gopkg.lock
+
+# Log files
+*.log
+
+# Editor-specific files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Added by me
+bin/
