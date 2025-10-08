@@ -1,5 +1,7 @@
 build:
-	@cd cmd/server; go build -o ../../bin/queueit
+	@cd cmd/server; GOOS=linux GOARCH=amd64 go build -o ../../bin/queueit
+	@cp cmd/server/.env ./bin
+	@cd cmd/server; CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -o ../../bin/queueit.exe
 	@cp cmd/server/.env ./bin
 	@echo "build success: path: ./bin/queueit"
 

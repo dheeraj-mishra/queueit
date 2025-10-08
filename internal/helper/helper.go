@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"queueit/internal/models"
 )
 
 // sets header content-type to JSON
@@ -38,4 +39,12 @@ func GetAppDataDir() (string, error) {
 		}
 	}
 	return filepath.Join(home, ".queueit"), nil
+}
+
+func IsValidStatus(s int) bool {
+	return models.ValidStatuses[s]
+}
+
+func IsValidPriority(s int) bool {
+	return models.ValidPriorities[s]
 }

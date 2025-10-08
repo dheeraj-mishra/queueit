@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"queueit/internal/helper"
 	"queueit/pkg/logger"
+	"strings"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 
 	response := healthResponse{
 		Status:  "UP",
-		Version: "v1",
+		Version: strings.Split(r.URL.Path, "/")[1],
 		Uptime:  fmt.Sprintf("%.f (second)", time.Since(starttime).Seconds()),
 	}
 
