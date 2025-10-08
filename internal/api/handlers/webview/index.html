@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>queueit - manage tasks</title>
+<style>
+    /* ===== Base Styles ===== */
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%; 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #1e1e2f;
+        color: #eee;
+    }
+    h1 {
+        text-align: center;
+        margin: 20px 0;
+        color: #fff;
+    }
+    button {
+        cursor: pointer;
+    }
+
+    /* ===== Container ===== */
+    .container {
+        max-width: 1200px;
+        margin: auto;
+        /* padding: 20px; */
+    }
+
+    /* ===== Filters ===== */
+    .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+        justify-content: center;
+    }
+    select, input[type="datetime-local"] {
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: none;
+        outline: none;
+        font-size: 14px;
+    }
+
+    /* ===== Task Grid ===== */
+    .task-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    /* ===== Task Card ===== */
+    .task-card {
+        background-color: #2a2a3d;
+        border-radius: 10px;
+        padding: 15px;
+        position: relative;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        transition: transform 0.2s;
+    }
+    .task-card:hover {
+        transform: scale(1.02);
+    }
+    .task-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0 0 10px;
+    }
+    .task-desc {
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: #ccc;
+    }
+    .task-footer {
+        display: flex;
+        flex-direction: column; /* stack lines */
+        font-size: 12px;
+        gap: 4px;
+    }
+    .task-footer span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .btn-edit {
+        background: none;
+        border: none;
+        color: #61dafb;
+        font-size: 16px;
+    }
+
+    /* ===== Priority/Status Colors ===== */
+    .priority-1 { border-left: 5px solid #ff6b6b; } /* High - red */
+    .priority-2 { border-left: 5px solid #feca57; } /* Medium - yellow */
+    .priority-3 { border-left: 5px solid #48dbfb; } /* Low - cyan */
+
+    .status-1 { opacity: 1; }
+    .status-2 { opacity: 0.9; }
+    .status-3 { opacity: 0.7; }
+    .status-4 { opacity: 0.5; }
+
+    /* ===== Modal ===== */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background-color: #2a2a3d;
+        padding: 20px;
+        border-radius: 10px;
+        min-width: 300px;
+    }
+    .modal-content input, .modal-content textarea, .modal-content select {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 6px;
+        border: none;
+        outline: none;
+        font-size: 14px;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .close {
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 18px;
+        color: #feca57;
+    }
+</style>
+</head>
+<body>
+<h1>queueit 🔥🎯</h1>
+
+<div class="container">
+    <div class="filters">
+        <select id="filter-status">
+            <option value="">All Status</option>
+            <option value="1">Pending</option>
+            <option value="2">WIP</option>
+            <option value="3">Done</option>
+            <option value="4">Archived</option>
+        </select>
+
+        <select id="filter-priority">
+            <option value="">All Priority</option>
+            <option value="1">High</option>
+            <option value="2">Medium</option>
+            <option value="3">Low</option>
+        </select>
+
+        <input type="datetime-local" id="filter-deadline" placeholder="Deadline before" />
+
+        <button id="btn-new-task">+ New Task</button>
+    </div>
+
+    <div class="task-grid" id="task-grid">
+        <!-- Task cards will appear here -->
+    </div>
+</div>
+
+<!-- Modal for Edit/Create -->
+<div class="modal" id="task-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-title">Edit Task</h3>
+            <span class="close" id="modal-close">&times;</span>
+        </div>
+        <input type="text" id="task-title" placeholder="Title" />
+        <textarea id="task-desc" placeholder="Description"></textarea>
+        <select id="task-priority">
+            <option value="1">High</option>
+            <option value="2">Medium</option>
+            <option value="3">Low</option>
+        </select>
+        <select id="task-status">
+            <option value="1">Pending</option>
+            <option value="2">WIP</option>
+            <option value="3">Done</option>
+            <option value="4">Archived</option>
+        </select>
+        <input type="datetime-local" id="task-deadline" />
+        <button id="save-task">Save</button>
+    </div>
+</div>
+
+<script>
+const API_URL = "http://127.0.0.1:18772/v1/tasks";
+
+let tasks = [];
+let editingTaskId = null;
+
+const taskGrid = document.getElementById("task-grid");
+const modal = document.getElementById("task-modal");
+const modalClose = document.getElementById("modal-close");
+const modalTitle = document.getElementById("modal-title");
+const taskTitleInput = document.getElementById("task-title");
+const taskDescInput = document.getElementById("task-desc");
+const taskPriorityInput = document.getElementById("task-priority");
+const taskStatusInput = document.getElementById("task-status");
+const taskDeadlineInput = document.getElementById("task-deadline");
+const saveTaskBtn = document.getElementById("save-task");
+
+const filterStatus = document.getElementById("filter-status");
+const filterPriority = document.getElementById("filter-priority");
+const filterDeadline = document.getElementById("filter-deadline");
+const btnNewTask = document.getElementById("btn-new-task");
+
+// ===== Fetch Tasks =====
+async function fetchTasks() {
+    try {
+        const res = await fetch(API_URL);
+        tasks = await res.json();
+        renderTasks();
+    } catch (err) {
+        console.error("Failed to fetch tasks:", err);
+    }
+}
+
+// ===== Render Tasks =====
+function renderTasks() {
+    taskGrid.innerHTML = "";
+    const now = new Date();
+
+    let filtered = tasks.filter(t => {
+        let match = true;
+        if(filterStatus.value) match = match && t.status == parseInt(filterStatus.value);
+        if(filterPriority.value) match = match && t.priority == parseInt(filterPriority.value);
+        if(filterDeadline.value) match = match && t.deadline_at && new Date(t.deadline_at) <= new Date(filterDeadline.value);
+        return match;
+    });
+
+    if(filtered.length === 0) {
+        const msg = document.createElement("div");
+        msg.style.textAlign = "center";
+        msg.style.color = "#aaa";
+        msg.style.gridColumn = "1 / -1"; // span entire grid width
+        msg.textContent = "No tasks pending 🥳";
+        taskGrid.appendChild(msg);
+        return;
+    }
+
+    filtered.forEach(task => {
+        let deadlineStr = "NA";
+        let remainingStr = "NA";
+
+        if(task.deadline_at) {
+            const deadline = new Date(task.deadline_at);
+            if(!isNaN(deadline.getTime())) {
+                deadlineStr = deadline.toLocaleString();
+                const remainingMs = deadline - now;
+                remainingStr = remainingMs >= 0 ? msToTime(remainingMs) : msToTime(-remainingMs) + " (Overdue)";
+            }
+        }
+
+        const card = document.createElement("div");
+        card.className = `task-card priority-${task.priority} status-${task.status}`;
+        card.innerHTML = `
+            <div class="task-title">${task.title}</div>
+            <div class="task-desc">${task.description || ''}</div>
+            <div class="task-footer">
+                <span>Deadline: ${deadlineStr}</span>
+                <span>Remaining: ${remainingStr}</span>
+            </div>
+            <button class="btn-edit" onclick="editTask(${task.task_id})">&#9998;</button>
+        `;
+        taskGrid.appendChild(card);
+    });
+}
+
+// ===== Convert ms to hh:mm:ss =====
+function msToTime(duration) {
+    const seconds = Math.floor((duration/1000) % 60);
+    const minutes = Math.floor((duration/1000/60) % 60);
+    const hours = Math.floor((duration/(1000*60*60)) % 24);
+    const days = Math.floor(duration/(1000*60*60*24));
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
+// ===== Edit Task =====
+function editTask(id) {
+    const task = tasks.find(t => t.task_id === id);
+    if(!task) return;
+    editingTaskId = id;
+    modalTitle.textContent = "Edit Task";
+    taskTitleInput.value = task.title;
+    taskDescInput.value = task.description || "";
+    taskPriorityInput.value = task.priority;
+    taskStatusInput.value = task.status;
+    taskDeadlineInput.value = task.deadline_at ? new Date(task.deadline_at).toISOString().slice(0,16) : "";
+    modal.style.display = "flex";
+}
+
+// ===== New Task =====
+btnNewTask.addEventListener("click", () => {
+    editingTaskId = null;
+    modalTitle.textContent = "New Task";
+    taskTitleInput.value = "";
+    taskDescInput.value = "";
+    taskPriorityInput.value = 2;
+    taskStatusInput.value = 1;
+    taskDeadlineInput.value = "";
+    modal.style.display = "flex";
+});
+
+// ===== Save Task =====
+saveTaskBtn.addEventListener("click", async () => {
+    const payload = {
+        title: taskTitleInput.value,
+        description: taskDescInput.value,
+        priority: parseInt(taskPriorityInput.value),
+        status: parseInt(taskStatusInput.value),
+        deadline_at: taskDeadlineInput.value ? new Date(taskDeadlineInput.value).toISOString() : null
+    };
+    try {
+        if(editingTaskId) {
+            await fetch(`${API_URL}/${editingTaskId}`, {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload)
+            });
+        } else {
+            await fetch(API_URL, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload)
+            });
+        }
+        modal.style.display = "none";
+        fetchTasks();
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+// ===== Close Modal =====
+modalClose.addEventListener("click", () => modal.style.display = "none");
+window.addEventListener("click", e => { if(e.target===modal) modal.style.display="none"; });
+
+// ===== Filters =====
+filterStatus.addEventListener("change", renderTasks);
+filterPriority.addEventListener("change", renderTasks);
+filterDeadline.addEventListener("change", renderTasks);
+
+// ===== Auto Update Remaining Time Every Second =====
+setInterval(renderTasks, 1000);
+
+// ===== Initial Fetch =====
+fetchTasks();
+</script>
+</body>
+</html>
+

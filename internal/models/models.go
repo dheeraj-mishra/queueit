@@ -18,3 +18,16 @@ type CreateTaskRequest struct {
 	Priority    int        `json:"priority"`
 	DeadlineAt  *time.Time `json:"deadline_at"`
 }
+
+type GenricTaskResponse struct {
+	TaskID  int64  `json:"taskid"`
+	Message string `json:"message"`
+}
+
+type UpdateTaskRequest struct {
+	Title       *string    `json:"title"`
+	Description *string    `json:"description"`
+	Status      *int       `json:"status"`
+	Priority    *int       `json:"priority"`
+	DeadlineAt  *time.Time `json:"deadline_at"`
+}

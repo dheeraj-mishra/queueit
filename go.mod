@@ -6,6 +6,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	github.com/swaggo/swag v1.16.6
+	github.com/webview/webview_go v0.0.0-20240831120633-6173450d4dd6
 	modernc.org/sqlite v1.39.0
 )
 
